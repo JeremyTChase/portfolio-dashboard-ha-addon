@@ -1,8 +1,8 @@
 {
   "name": "Portfolio Dashboard",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "slug": "portfolio_dashboard",
-  "description": "GPU-optimised portfolio monitoring with AI agent. Tracks Freetrade SIP & ISA positions, risk metrics, macro indicators, and market news.",
+  "description": "Portfolio monitoring dashboard. Displays Freetrade SIP & ISA positions, risk metrics, and market data. Agent tasks handled by NemoClaw.",
   "url": "https://github.com/JeremyTChase/portfolio-dashboard-ha-addon",
   "arch": ["aarch64", "amd64"],
   "startup": "application",
@@ -21,21 +21,9 @@
     "TZ": "{timezone}"
   },
   "options": {
-    "vllm_base_url": "http://192.168.6.241:8000/v1",
-    "vllm_model": "nvidia/Qwen3-Next-80B-A3B-Instruct-NVFP4",
-    "timezone": "Europe/London",
-    "price_update_interval": 15,
-    "daily_analysis_time": "07:30",
-    "weekly_review_day": "saturday",
-    "weekly_review_time": "09:00"
+    "timezone": "Europe/London"
   },
   "schema": {
-    "vllm_base_url": "url",
-    "vllm_model": "str",
-    "timezone": "str",
-    "price_update_interval": "int(5,60)",
-    "daily_analysis_time": "match(^[0-2][0-9]:[0-5][0-9]$)",
-    "weekly_review_day": "list(monday|tuesday|wednesday|thursday|friday|saturday|sunday)",
-    "weekly_review_time": "match(^[0-2][0-9]:[0-5][0-9]$)"
+    "timezone": "str"
   }
 }
