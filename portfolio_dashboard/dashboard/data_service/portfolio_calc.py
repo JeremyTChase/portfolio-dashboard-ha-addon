@@ -1,35 +1,51 @@
 """Portfolio weight and P&L calculations."""
 
+import logging
+
 from . import models
 
-# Tickers that trade on LSE in USD (not GBX) despite having .L suffix
-_LSE_USD_TICKERS = {"VJPN.L", "VWRP.L", "IUSA.L"}
+logger = logging.getLogger(__name__)
+
+# LSE tickers where yfinance reports prices in GBP (not GBp/pence)
+# These should NOT be divided by 100
+# Determined by checking yf.Ticker(t).fast_info.currency == "GBP"
+_LSE_GBP_TICKERS = {"VJPN.L", "VWRP.L"}
+
+# Cache for FX rate within a single calculation cycle
+_fx_cache = {}
 
 
 def _get_gbpusd_rate():
     """Get latest GBP/USD exchange rate from macro indicators."""
-    macro = models.get_latest_macro()
-    if "GBPUSD=X" in macro:
-        return macro["GBPUSD=X"]["value"]
-    return 1.30  # fallback
+    if "gbpusd" not in _fx_cache:
+        macro = models.get_latest_macro()
+        if "GBPUSD=X" in macro:
+            _fx_cache["gbpusd"] = macro["GBPUSD=X"]["value"]
+        else:
+            _fx_cache["gbpusd"] = 1.30
+    return _fx_cache["gbpusd"]
 
 
 def _price_to_gbp(ticker, price):
     """Convert a raw yfinance price to GBP.
 
-    - .L tickers: price is in GBX (pence) -> divide by 100 for GBP
-    - .L tickers in USD list (VJPN, VWRP, IUSA): price is in USD -> convert
-    - US tickers: price is in USD -> convert to GBP
+    yfinance currency conventions:
+    - Most .L tickers: GBp (pence) -> divide by 100
+    - Some .L ETFs (VJPN, VWRP): GBP (pounds) -> use as-is
+    - US tickers: USD -> convert using GBPUSD rate
     """
-    if ticker in _LSE_USD_TICKERS:
-        # These LSE ETFs are priced in USD on yfinance
-        gbpusd = _get_gbpusd_rate()
-        return price / gbpusd
-    elif ticker.endswith(".L"):
-        # Standard UK stocks priced in GBX (pence)
-        return price / 100.0
+    if price is None or price == 0:
+        return 0.0
+
+    if ticker.endswith(".L"):
+        if ticker in _LSE_GBP_TICKERS:
+            # Already in GBP
+            return price
+        else:
+            # GBp (pence) -> GBP
+            return price / 100.0
     else:
-        # US stocks priced in USD
+        # USD -> GBP
         gbpusd = _get_gbpusd_rate()
         return price / gbpusd
 
@@ -38,13 +54,13 @@ def calculate_portfolio_summary(portfolio_id):
     """Calculate market values, weights, and P&L for a portfolio.
 
     All values returned in GBP.
-
-    Returns list of dicts with: ticker, shares, current_price, market_value,
-    weight, cost_basis, pnl, pnl_pct, currency.
     """
     positions = models.get_positions(portfolio_id)
     if not positions:
         return []
+
+    # Clear FX cache for fresh rate
+    _fx_cache.clear()
 
     rows = []
     for pos in positions:
@@ -53,7 +69,6 @@ def calculate_portfolio_summary(portfolio_id):
         price_data = models.get_latest_price(ticker)
         raw_price = price_data["close"] if price_data else 0.0
 
-        # Convert to GBP
         display_price = _price_to_gbp(ticker, raw_price)
         market_value = shares * display_price
 
@@ -76,7 +91,6 @@ def calculate_portfolio_summary(portfolio_id):
             "currency": "GBP",
         })
 
-    # Calculate weights
     total_value = sum(r["market_value"] for r in rows)
     for r in rows:
         r["weight"] = r["market_value"] / total_value if total_value > 0 else 0

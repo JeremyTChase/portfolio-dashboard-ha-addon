@@ -1,6 +1,6 @@
 {
   "name": "Portfolio Dashboard",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "slug": "portfolio_dashboard",
   "description": "GPU-optimised portfolio monitoring with AI agent. Tracks Freetrade SIP & ISA positions, risk metrics, macro indicators, and market news.",
   "url": "https://github.com/JeremyTChase/portfolio-dashboard-ha-addon",
