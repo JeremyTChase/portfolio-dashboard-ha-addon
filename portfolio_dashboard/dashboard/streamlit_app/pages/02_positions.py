@@ -11,7 +11,7 @@ if not st.session_state.get("authenticated"):
     st.warning("Please log in from the main page.")
     st.stop()
 import pandas as pd
-from data_service import models, portfolio_calc
+from data_service import models, portfolio_calc, ticker_lookup
 
 st.header("Positions")
 
@@ -25,7 +25,13 @@ if not summary:
     st.stop()
 
 total = sum(r["market_value"] for r in summary)
-st.metric("Total Portfolio Value", f"{total:,.2f}")
+st.metric("Total Portfolio Value", f"£{total:,.2f}")
+
+# Add company names
+tickers = [r["ticker"] for r in summary]
+names = ticker_lookup.get_company_names(tickers)
+for r in summary:
+    r["company"] = names.get(r["ticker"], r["ticker"])
 
 df = pd.DataFrame(summary)
 
@@ -35,15 +41,14 @@ def colour_pnl(val):
         return ""
     return "color: green" if val >= 0 else "color: red"
 
-styled = df[["ticker", "shares", "avg_cost", "current_price", "market_value", "weight", "pnl", "pnl_pct"]].style.map(
+styled = df[["company", "ticker", "shares", "current_price", "market_value", "weight", "pnl", "pnl_pct"]].style.map(
     colour_pnl, subset=["pnl", "pnl_pct"]
 ).format({
     "shares": "{:.2f}",
-    "avg_cost": lambda x: f"{x:.2f}" if x else "—",
-    "current_price": "{:.2f}",
-    "market_value": "{:,.0f}",
+    "current_price": "£{:.2f}",
+    "market_value": "£{:,.0f}",
     "weight": "{:.1%}",
-    "pnl": lambda x: f"{x:,.0f}" if x is not None else "—",
+    "pnl": lambda x: f"£{x:,.0f}" if x is not None else "—",
     "pnl_pct": lambda x: f"{x:.1%}" if x is not None else "—",
 })
 
