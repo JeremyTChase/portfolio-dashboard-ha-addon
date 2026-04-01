@@ -1,5 +1,6 @@
-ARG BUILD_FROM=python:3.12-slim
-FROM ${BUILD_FROM}
+FROM python:3.12-slim
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl jq && \
@@ -14,4 +15,4 @@ COPY dashboard/ ./dashboard/
 COPY run.sh /run.sh
 RUN chmod +x /run.sh
 
-ENTRYPOINT ["/run.sh"]
+CMD [ "/run.sh" ]
