@@ -1,4 +1,5 @@
-FROM python:3.12-slim
+ARG BUILD_FROM
+FROM ${BUILD_FROM}
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
