@@ -144,8 +144,8 @@ def apply_trades_to_positions(existing_positions, trades):
     for p in existing_positions:
         current[p["ticker"]] = {
             "shares": p["shares"],
-            "avg_cost": p.get("avg_cost_basis"),
-            "currency": p.get("currency", "GBP"),
+            "avg_cost": p["avg_cost_basis"],
+            "currency": p["currency"] if p["currency"] else "GBP",
         }
 
     # Apply each trade

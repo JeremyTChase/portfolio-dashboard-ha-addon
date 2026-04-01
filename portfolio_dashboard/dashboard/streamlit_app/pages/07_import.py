@@ -50,7 +50,7 @@ if uploaded:
 
     if import_mode == "delta" and existing:
         # Delta mode: find last import date, extract only new trades
-        last_dates = [p["last_updated"] for p in existing if p.get("last_updated")]
+        last_dates = [p["last_updated"] for p in existing if p["last_updated"]]
         if last_dates:
             since = max(last_dates)[:10]  # YYYY-MM-DD
         else:
@@ -163,6 +163,6 @@ st.divider()
 st.subheader("Current Portfolios")
 for p in models.get_portfolios():
     pos = models.get_positions(p["id"])
-    last_dates = [pp["last_updated"] for pp in pos if pp.get("last_updated")]
+    last_dates = [pp["last_updated"] for pp in pos if pp["last_updated"]]
     last = max(last_dates)[:10] if last_dates else "Never"
     st.markdown(f"**{p['name']}**: {len(pos)} positions (last updated: {last})")
