@@ -1,0 +1,35 @@
+database:
+  path: db/portfolio.db
+
+vllm:
+  base_url: http://spark-ea42:8000/v1
+  model: nvidia/Qwen3-Next-80B-A3B-Instruct-NVFP4
+
+price_update:
+  interval_minutes: 15
+  market_hours_utc:
+    start: 7   # covers LSE pre-market
+    end: 21    # covers NYSE close
+
+macro_tickers:
+  - ^VIX
+  - GC=F      # gold
+  - CL=F      # WTI crude oil
+  - ^TNX      # US 10Y yield
+  - GBPUSD=X
+
+news_feeds:
+  - https://feeds.bbci.co.uk/news/business/rss.xml
+  - https://feeds.reuters.com/reuters/worldNews
+
+agent:
+  daily_analysis_time: "07:30"
+  price_alert_threshold_daily: 0.03   # 3%
+  price_alert_threshold_weekly: 0.05  # 5%
+  weekly_review_day: saturday
+  weekly_review_time: "09:00"
+  drift_threshold: 0.10               # 10% L1 drift triggers rebalance suggestion
+
+dashboard:
+  port: 8501
+  refresh_seconds: 60
