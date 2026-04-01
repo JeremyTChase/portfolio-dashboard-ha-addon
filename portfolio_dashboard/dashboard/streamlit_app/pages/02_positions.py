@@ -35,7 +35,7 @@ def colour_pnl(val):
         return ""
     return "color: green" if val >= 0 else "color: red"
 
-styled = df[["ticker", "shares", "avg_cost", "current_price", "market_value", "weight", "pnl", "pnl_pct"]].style.applymap(
+styled = df[["ticker", "shares", "avg_cost", "current_price", "market_value", "weight", "pnl", "pnl_pct"]].style.map(
     colour_pnl, subset=["pnl", "pnl_pct"]
 ).format({
     "shares": "{:.2f}",

@@ -51,3 +51,40 @@ CREATE TABLE IF NOT EXISTS agent_logs (
     full_analysis TEXT,
     severity TEXT DEFAULT 'info'   -- 'info', 'warning', 'alert'
 );
+
+-- Historical tracking tables
+
+CREATE TABLE IF NOT EXISTS position_snapshots (
+    portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+    snapshot_date TEXT NOT NULL,     -- YYYY-MM-DD
+    ticker TEXT NOT NULL,
+    shares REAL NOT NULL,
+    price REAL,                      -- closing price on that date
+    market_value REAL,
+    weight REAL,                     -- portfolio weight on that date
+    PRIMARY KEY (portfolio_id, snapshot_date, ticker)
+);
+
+CREATE TABLE IF NOT EXISTS risk_metrics_history (
+    portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+    date TEXT NOT NULL,              -- YYYY-MM-DD
+    total_value REAL,
+    volatility_annual REAL,
+    sharpe_ratio REAL,
+    sortino_ratio REAL,
+    max_drawdown REAL,
+    cvar_95 REAL,
+    PRIMARY KEY (portfolio_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS transaction_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    portfolio_id TEXT NOT NULL REFERENCES portfolios(id),
+    logged_at TEXT NOT NULL,
+    ticker TEXT NOT NULL,
+    action TEXT NOT NULL,            -- 'added', 'removed', 'increased', 'decreased'
+    shares_before REAL,
+    shares_after REAL,
+    shares_delta REAL,
+    notes TEXT
+);

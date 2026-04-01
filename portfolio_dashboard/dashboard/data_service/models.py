@@ -200,3 +200,140 @@ def get_agent_logs(task_type=None, limit=20):
                 "SELECT * FROM agent_logs ORDER BY created_at DESC LIMIT ?", (limit,)
             ).fetchall()
         return [dict(r) for r in rows]
+
+
+# --- Position snapshots (historical tracking) ---
+
+def take_position_snapshot(portfolio_id, snapshot_date=None):
+    """Snapshot current positions with prices and weights for a given date."""
+    if snapshot_date is None:
+        snapshot_date = datetime.utcnow().strftime("%Y-%m-%d")
+    positions = get_positions(portfolio_id)
+    if not positions:
+        return
+    # Calculate market values and total
+    records = []
+    total = 0.0
+    pos_data = []
+    for p in positions:
+        price_info = get_latest_price(p["ticker"])
+        price = price_info["close"] if price_info else None
+        mv = p["shares"] * price if price else 0.0
+        total += mv
+        pos_data.append((p["ticker"], p["shares"], price, mv))
+    # Insert with weights
+    with get_conn() as conn:
+        for ticker, shares, price, mv in pos_data:
+            weight = mv / total if total > 0 else 0.0
+            conn.execute(
+                "INSERT OR REPLACE INTO position_snapshots "
+                "(portfolio_id, snapshot_date, ticker, shares, price, market_value, weight) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (portfolio_id, snapshot_date, ticker, shares, price, mv, weight),
+            )
+    return total
+
+
+def get_position_snapshots(portfolio_id, start_date=None, end_date=None):
+    """Get historical position snapshots."""
+    with get_conn() as conn:
+        query = "SELECT * FROM position_snapshots WHERE portfolio_id=?"
+        params = [portfolio_id]
+        if start_date:
+            query += " AND snapshot_date>=?"
+            params.append(start_date)
+        if end_date:
+            query += " AND snapshot_date<=?"
+            params.append(end_date)
+        query += " ORDER BY snapshot_date, ticker"
+        return [dict(r) for r in conn.execute(query, params).fetchall()]
+
+
+def get_portfolio_value_history(portfolio_id):
+    """Get daily total portfolio value from snapshots."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT snapshot_date, SUM(market_value) as total_value "
+            "FROM position_snapshots WHERE portfolio_id=? "
+            "GROUP BY snapshot_date ORDER BY snapshot_date",
+            (portfolio_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+# --- Risk metrics history ---
+
+def insert_risk_metrics_history(portfolio_id, date, total_value, metrics):
+    """Store risk metrics for a specific date (daily time series)."""
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO risk_metrics_history "
+            "(portfolio_id, date, total_value, volatility_annual, sharpe_ratio, "
+            "sortino_ratio, max_drawdown, cvar_95) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (portfolio_id, date, total_value,
+             metrics.get("volatility_annual"), metrics.get("sharpe_ratio"),
+             metrics.get("sortino_ratio"), metrics.get("max_drawdown"),
+             metrics.get("cvar_95")),
+        )
+
+
+def get_risk_metrics_history(portfolio_id, start_date=None):
+    """Get risk metrics time series."""
+    with get_conn() as conn:
+        query = "SELECT * FROM risk_metrics_history WHERE portfolio_id=?"
+        params = [portfolio_id]
+        if start_date:
+            query += " AND date>=?"
+            params.append(start_date)
+        query += " ORDER BY date"
+        return [dict(r) for r in conn.execute(query, params).fetchall()]
+
+
+# --- Transaction log ---
+
+def log_transactions(portfolio_id, old_positions, new_positions):
+    """Compare old vs new positions and log the differences."""
+    now = datetime.utcnow().isoformat()
+    old_map = {p["ticker"]: p["shares"] for p in old_positions}
+    new_map = {p["ticker"]: p["shares"] for p in new_positions}
+    all_tickers = set(list(old_map.keys()) + list(new_map.keys()))
+
+    with get_conn() as conn:
+        for ticker in all_tickers:
+            old_shares = old_map.get(ticker, 0)
+            new_shares = new_map.get(ticker, 0)
+            delta = new_shares - old_shares
+
+            if abs(delta) < 0.001:
+                continue
+
+            if old_shares == 0:
+                action = "added"
+            elif new_shares == 0:
+                action = "removed"
+            elif delta > 0:
+                action = "increased"
+            else:
+                action = "decreased"
+
+            conn.execute(
+                "INSERT INTO transaction_log "
+                "(portfolio_id, logged_at, ticker, action, shares_before, shares_after, shares_delta) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (portfolio_id, now, ticker, action, old_shares, new_shares, delta),
+            )
+
+
+def get_transaction_log(portfolio_id=None, limit=50):
+    """Get recent transaction log entries."""
+    with get_conn() as conn:
+        if portfolio_id:
+            rows = conn.execute(
+                "SELECT * FROM transaction_log WHERE portfolio_id=? ORDER BY logged_at DESC LIMIT ?",
+                (portfolio_id, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM transaction_log ORDER BY logged_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]

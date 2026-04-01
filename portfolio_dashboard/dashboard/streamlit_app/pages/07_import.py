@@ -56,12 +56,14 @@ if uploaded:
 
     if st.button("Confirm Import", type="primary"):
         with st.spinner("Importing positions and fetching prices..."):
-            # Import
             name = "SIP (SIPP)" if account == "sip" else "SS ISA"
             models.upsert_portfolio(account, name)
 
-            old = models.get_positions(account)
-            for p in old:
+            # Capture old positions for transaction log
+            old_positions = models.get_positions(account)
+
+            # Clear and re-insert
+            for p in old_positions:
                 models.delete_position(account, p["ticker"])
 
             for ticker, data in positions.items():
@@ -70,13 +72,31 @@ if uploaded:
                     avg_cost=data["avg_cost"], currency=data["currency"]
                 )
 
-            # Fetch prices
-            price_updater.fetch_and_store_prices()
+            # Log what changed
+            new_positions = models.get_positions(account)
+            models.log_transactions(account, old_positions, new_positions)
 
-            # Calculate risk metrics
+            # Fetch prices and calculate risk
+            price_updater.fetch_and_store_prices()
             risk_metrics.calculate_and_store_metrics(account)
 
+            # Take a snapshot
+            today = __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d")
+            total = models.take_position_snapshot(account, today)
+            m = models.get_latest_risk_metrics(account)
+            if total and m:
+                models.insert_risk_metrics_history(account, today, total, m)
+
         st.success(f"Imported {len(positions)} positions for {name}!")
+
+        # Show what changed
+        txns = models.get_transaction_log(account, limit=10)
+        if txns:
+            st.subheader("Changes detected:")
+            for t in txns:
+                icon = {"added": "+", "removed": "-", "increased": "^", "decreased": "v"}.get(t["action"], "?")
+                st.markdown(f"  {icon} **{t['ticker']}**: {t['action']} ({t['shares_before']:.1f} -> {t['shares_after']:.1f})")
+
         st.balloons()
 
 st.divider()
