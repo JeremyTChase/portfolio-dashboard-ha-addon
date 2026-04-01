@@ -205,31 +205,25 @@ def get_agent_logs(task_type=None, limit=20):
 # --- Position snapshots (historical tracking) ---
 
 def take_position_snapshot(portfolio_id, snapshot_date=None):
-    """Snapshot current positions with prices and weights for a given date."""
+    """Snapshot current positions with GBP-converted values and weights."""
     if snapshot_date is None:
         snapshot_date = datetime.utcnow().strftime("%Y-%m-%d")
-    positions = get_positions(portfolio_id)
-    if not positions:
-        return
-    # Calculate market values and total
-    records = []
-    total = 0.0
-    pos_data = []
-    for p in positions:
-        price_info = get_latest_price(p["ticker"])
-        price = price_info["close"] if price_info else None
-        mv = p["shares"] * price if price else 0.0
-        total += mv
-        pos_data.append((p["ticker"], p["shares"], price, mv))
-    # Insert with weights
+
+    # Use portfolio_calc for correct GBP conversion
+    from data_service.portfolio_calc import calculate_portfolio_summary
+    summary = calculate_portfolio_summary(portfolio_id)
+    if not summary:
+        return None
+
+    total = sum(r["market_value"] for r in summary)
     with get_conn() as conn:
-        for ticker, shares, price, mv in pos_data:
-            weight = mv / total if total > 0 else 0.0
+        for r in summary:
             conn.execute(
                 "INSERT OR REPLACE INTO position_snapshots "
                 "(portfolio_id, snapshot_date, ticker, shares, price, market_value, weight) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (portfolio_id, snapshot_date, ticker, shares, price, mv, weight),
+                (portfolio_id, snapshot_date, r["ticker"], r["shares"],
+                 r["current_price"], r["market_value"], r["weight"]),
             )
     return total
 
