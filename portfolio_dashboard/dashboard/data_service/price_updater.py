@@ -3,10 +3,16 @@
 import logging
 from datetime import datetime, timedelta
 
+import os
 import pandas as pd
 import yaml
 import yfinance as yf
 from pathlib import Path
+
+# Fix yfinance TzCache folder issue in containers
+_cache_dir = os.environ.get("PORTFOLIO_DATA_DIR", "/data") + "/.yf_cache"
+os.makedirs(_cache_dir, exist_ok=True)
+yf.set_tz_cache_location(_cache_dir)
 
 from . import models
 
