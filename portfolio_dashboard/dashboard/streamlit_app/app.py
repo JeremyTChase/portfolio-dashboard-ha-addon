@@ -120,6 +120,9 @@ st.set_page_config(
 st.title("Portfolio Dashboard")
 st.caption("SIP & SS ISA — Freetrade Portfolio Monitoring")
 
+from components.agent_chat import render_chat_sidebar
+render_chat_sidebar(page_name="home")
+
 # Quick overview on main page
 portfolios = models.get_portfolios()
 

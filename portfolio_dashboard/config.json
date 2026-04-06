@@ -1,6 +1,6 @@
 {
   "name": "Portfolio Dashboard",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "slug": "portfolio_dashboard",
   "description": "Portfolio monitoring dashboard. Displays Freetrade SIP & ISA positions, risk metrics, and market data. Agent tasks handled by NemoClaw.",
   "url": "https://github.com/JeremyTChase/portfolio-dashboard-ha-addon",
