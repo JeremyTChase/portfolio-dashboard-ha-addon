@@ -30,6 +30,14 @@ agent:
   weekly_review_time: "09:00"
   drift_threshold: 0.10               # 10% L1 drift triggers rebalance suggestion
 
+ibkr:
+  enabled: false                # set to true when TWS/Gateway is running
+  host: "127.0.0.1"
+  port: 7497                    # 7497 = TWS paper, 4002 = Gateway paper
+  client_id: 1
+  account_id: "DUP705196"      # paper trading account
+  timeout: 10
+
 dashboard:
   port: 8501
   refresh_seconds: 60

@@ -10,6 +10,9 @@ import streamlit as st
 if not st.session_state.get("authenticated"):
     st.warning("Please log in from the main page.")
     st.stop()
+
+from components.agent_chat import render_chat_sidebar
+render_chat_sidebar(page_name="agent_logs")
 from data_service import models
 
 st.header("AI Agent")

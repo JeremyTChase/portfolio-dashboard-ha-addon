@@ -331,3 +331,46 @@ def get_transaction_log(portfolio_id=None, limit=50):
                 "SELECT * FROM transaction_log ORDER BY logged_at DESC LIMIT ?", (limit,)
             ).fetchall()
         return [dict(r) for r in rows]
+
+
+# --- OHLCV prices ---
+
+def insert_ohlcv(records):
+    """Insert OHLCV records: list of (ticker, date_str, open, high, low, close, volume, currency, source)."""
+    with get_conn() as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO ohlcv_prices "
+            "(ticker, date, open, high, low, close, volume, currency, source) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            records,
+        )
+
+
+def get_ohlcv(ticker, start_date=None, end_date=None):
+    """Get OHLCV data for a ticker. Returns list of dicts ordered by date."""
+    with get_conn() as conn:
+        query = "SELECT * FROM ohlcv_prices WHERE ticker=?"
+        params = [ticker]
+        if start_date:
+            query += " AND date>=?"
+            params.append(start_date)
+        if end_date:
+            query += " AND date<=?"
+            params.append(end_date)
+        query += " ORDER BY date"
+        return [dict(r) for r in conn.execute(query, params).fetchall()]
+
+
+def get_last_ohlcv_date(ticker, source=None):
+    """Get the most recent OHLCV date for a ticker."""
+    with get_conn() as conn:
+        if source:
+            row = conn.execute(
+                "SELECT MAX(date) as last_date FROM ohlcv_prices WHERE ticker=? AND source=?",
+                (ticker, source),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT MAX(date) as last_date FROM ohlcv_prices WHERE ticker=?", (ticker,)
+            ).fetchone()
+        return row["last_date"] if row else None

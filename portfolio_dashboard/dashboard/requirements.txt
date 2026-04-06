@@ -7,3 +7,5 @@ feedparser>=6.0
 schedule>=1.2
 openai>=1.0
 pyyaml>=6.0
+pandas-ta>=0.3.14b
+ib_async>=1.0.0

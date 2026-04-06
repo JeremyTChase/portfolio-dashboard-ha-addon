@@ -12,14 +12,42 @@ if not st.session_state.get("authenticated"):
     st.warning("Please log in from the main page.")
     st.stop()
 
+from components.agent_chat import render_chat_sidebar
+render_chat_sidebar(page_name="quick_trade")
+
 from data_service import models, price_updater, risk_metrics, ticker_lookup
 
 st.header("Quick Trade")
 st.markdown("Log trades directly — no CSV needed.")
 
 # Account selector
-account = st.selectbox("Account", ["sip", "ss_isa"],
-                       format_func=lambda x: "SIP (SIPP)" if x == "sip" else "SS ISA")
+_ACCOUNT_LABELS = {"sip": "SIP (SIPP)", "ss_isa": "SS ISA", "gia": "GIA (IBKR)"}
+account = st.selectbox("Account", list(_ACCOUNT_LABELS.keys()),
+                       format_func=lambda x: _ACCOUNT_LABELS.get(x, x))
+
+# IBKR sync for GIA
+if account == "gia":
+    from data_service.ibkr_client import IBKRClient, IB_AVAILABLE
+    if IB_AVAILABLE:
+        if "ibkr_client" not in st.session_state:
+            st.session_state["ibkr_client"] = IBKRClient()
+        _client = st.session_state["ibkr_client"]
+        if _client.is_connected():
+            if st.button("Sync from IBKR", type="secondary"):
+                from data_service import ibkr_sync
+                with st.spinner("Syncing IBKR positions..."):
+                    result = ibkr_sync.sync_positions(_client)
+                if result:
+                    st.success(
+                        f"Synced {result['total']} positions "
+                        f"(+{result['added']} new, ~{result['updated']} updated, "
+                        f"-{result['removed']} removed)"
+                    )
+                    st.rerun()
+                else:
+                    st.error("Sync failed — check IBKR connection")
+        else:
+            st.info("Connect to IBKR from the Technical Analysis page to enable sync")
 
 # Current positions with names
 positions = models.get_positions(account)

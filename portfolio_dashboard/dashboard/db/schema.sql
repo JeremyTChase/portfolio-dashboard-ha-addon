@@ -88,3 +88,16 @@ CREATE TABLE IF NOT EXISTS transaction_log (
     shares_delta REAL,
     notes TEXT
 );
+
+CREATE TABLE IF NOT EXISTS ohlcv_prices (
+    ticker TEXT NOT NULL,
+    date TEXT NOT NULL,
+    open REAL NOT NULL,
+    high REAL NOT NULL,
+    low REAL NOT NULL,
+    close REAL NOT NULL,
+    volume INTEGER,
+    currency TEXT DEFAULT 'USD',
+    source TEXT DEFAULT 'yfinance',  -- 'yfinance' or 'ibkr'
+    PRIMARY KEY (ticker, date)
+);

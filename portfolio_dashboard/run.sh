@@ -6,10 +6,12 @@ echo "=== Portfolio Dashboard Add-on Starting ==="
 # Read HA add-on options
 OPTIONS_FILE="/data/options.json"
 if [ -f "$OPTIONS_FILE" ]; then
-    export VLLM_BASE_URL=$(jq -r '.vllm_base_url' "$OPTIONS_FILE")
-    export VLLM_MODEL=$(jq -r '.vllm_model' "$OPTIONS_FILE")
+    export VLLM_BASE_URL=$(jq -r '.vllm_base_url // ""' "$OPTIONS_FILE")
+    export VLLM_MODEL=$(jq -r '.vllm_model // ""' "$OPTIONS_FILE")
     export TZ=$(jq -r '.timezone' "$OPTIONS_FILE")
-    echo "Options loaded from $OPTIONS_FILE"
+    export AGENT_API_URL=$(jq -r '.agent_api_url // "http://127.0.0.1:18792"' "$OPTIONS_FILE")
+    export AGENT_API_KEY=$(jq -r '.agent_api_key // ""' "$OPTIONS_FILE")
+    echo "Options loaded from $OPTIONS_FILE (agent_api: $AGENT_API_URL)"
 else
     echo "No options file found, using defaults"
 fi
